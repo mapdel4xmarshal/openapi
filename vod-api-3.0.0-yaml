@@ -1,0 +1,2436 @@
+openapi: 3.0.0
+info:
+  title: SSIMPLUS VOD Monitor
+  description: SSIMPLUS VOD Monitor REST API
+  version: ''
+paths:
+  /devices:
+    get:
+      tags:
+        - devices
+      summary: List all Devices
+      description: >-
+        Fetches one or more [viewer devices](speca://device) as defined by the
+        parameters of the request.
+
+
+        This will retrieve the entire list of devices that match the filters, if
+        applicable.  Since the response has the potential to be large, the
+        results will paginated, again according to the request parameters (by
+        default a maximum of 100 devices are allowed in each response).
+
+
+        The results will be returned as a JSON object with an `devices` key, the
+        value of which will be an array of [device](speca://device) objects,
+        each of which contain the standard device attributes.
+      operationId: getDevices
+      parameters:
+        - $ref: '#/components/parameters/Content-type'
+        - $ref: '#/components/parameters/idFrom'
+        - $ref: '#/components/parameters/idTo'
+        - name: category
+          in: query
+          description: A request parameter that matches against the device category.
+          example: TV
+          schema:
+            type: string
+            enum:
+              - TV
+              - Phone
+              - Tablet
+              - Laptop
+              - Monitor
+              - IFE
+              - Other
+        - name: manufacturer
+          in: query
+          description: >-
+            A request parameter that performs LIKE matching against the device
+            manufacturer.
+          example: Sony
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 200
+        - $ref: '#/components/parameters/sort'
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/pageSize'
+      responses:
+        '200':
+          description: An array of devices that match the request parameters requested.
+          content:
+            application/json;charset=UTF-8:
+              schema:
+                type: object
+                properties:
+                  pageLinks:
+                    $ref: '#/components/schemas/paginationLinks'
+                  pageMetadata:
+                    $ref: '#/components/schemas/pageMetadata'
+                  devices:
+                    type: array
+                    description: >-
+                      An array of devices that match the request parameters
+                      requested.
+                    items:
+                      $ref: '#/components/schemas/device'
+        '204':
+          description: >-
+            The server successfully processed the request, but is not returning
+            any content.
+        '400':
+          $ref: '#/components/responses/400'
+        '415':
+          $ref: '#/components/responses/415'
+        '500':
+          $ref: '#/components/responses/500'
+        '503':
+          $ref: '#/components/responses/503'
+    post:
+      tags:
+        - devices
+      summary: Create a new Device
+      description: >-
+        To create a new [device](speca://device), send a POST request to
+        `/devices`.
+
+
+        When submitting the [device](speca://device) in the body of the request,
+        the `name`, `category` and `resolution` attributes are all required.
+        Any value included for `id` will be ignored.
+      operationId: createDevice
+      parameters:
+        - $ref: '#/components/parameters/Content-type'
+      responses:
+        '201':
+          description: >-
+            A Device will be created using the provided information. The
+            response body will contain a JSON object with a key called `device`.
+            The value will be an object containing the standard attributes for
+            your new Device.
+          content:
+            application/json;charset=UTF-8:
+              schema:
+                type: object
+                properties:
+                  device:
+                    $ref: '#/components/schemas/device'
+        '400':
+          $ref: '#/components/responses/400'
+        '415':
+          $ref: '#/components/responses/415'
+        '500':
+          $ref: '#/components/responses/500'
+        '503':
+          $ref: '#/components/responses/503'
+        conflict:
+          $ref: '#/components/responses/conflict'
+      requestBody:
+        content:
+          application/json;charset=UTF-8:
+            schema:
+              $ref: '#/components/schemas/device'
+        description: >-
+          When submitting the [device](speca://device) in the body of the
+          request, the `name`, `category` and `resolution` attributes are all
+          required.  Any value included for `id` will be ignored.
+        required: true
+  '/devices/{DEVICE_ID}':
+    get:
+      tags:
+        - devices
+      summary: Retrieve an existing Device by id
+      description: >-
+        To show an individual [device](speca://device), send a GET request to
+        `/devices/{DEVICE_ID}`.
+
+
+        The response will be a JSON object with a key called `device`. This will
+        be set to a JSON object that represents the device and its attributes.
+      operationId: getDeviceById
+      parameters:
+        - $ref: '#/components/parameters/Content-type'
+        - name: DEVICE_ID
+          in: path
+          description: >-
+            A path parameter to match against the system-generated unique
+            identifer of a device.
+          required: true
+          example: 1
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json;charset=UTF-8:
+              schema:
+                type: object
+                properties:
+                  device:
+                    $ref: '#/components/schemas/device'
+        '400':
+          $ref: '#/components/responses/400'
+        '415':
+          $ref: '#/components/responses/415'
+        '500':
+          $ref: '#/components/responses/500'
+        '503':
+          $ref: '#/components/responses/503'
+        notFound:
+          $ref: '#/components/responses/notFound'
+    put:
+      tags:
+        - devices
+      summary: Replace an existing Device
+      description: >-
+        To replace an existing [device](speca://device), send a PUT request to
+        `/devices/{DEVICE_ID}`. Generally, PUT should be used to replace ALL
+        attributes of an existing asset and, as such, the body in the request
+        **should contain values for all attributes** (`id` can be omitted and
+        will be ignored if supplied).  Any missing attribute values in the body
+        of the request will be interpreted as attributes that should be removed,
+        if possible.  If you wish to update a subset of attributes on an
+        existing device, please use the [PATCH
+        request](speca://updateDeviceById).
+
+
+        ~~~info
+
+        If the new attributes values match the existing values, there will be no
+        change to the underlying resource and the system will return `304 Not
+        Modified`.
+
+        ~~~
+
+
+        ~~~info
+
+        Built-in system devices (i.e. those that use negative values for their
+        `id` attribute) are not modifiable and, as such, will return a `403
+        Forbidden`.
+
+        ~~~
+      operationId: replaceDeviceById
+      parameters:
+        - $ref: '#/components/parameters/Content-type'
+        - name: DEVICE_ID
+          in: path
+          description: >-
+            A path parameter to match against the system-generated unique
+            identifer of a device.  Note that while built-in devices have
+            negative ids, you are not permitted to replace these and, as such,
+            the path parameter is lmited to positive integers.
+          required: true
+          example: 1
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json;charset=UTF-8:
+              schema:
+                type: object
+                properties:
+                  device:
+                    $ref: '#/components/schemas/device'
+        '400':
+          $ref: '#/components/responses/400'
+        '415':
+          $ref: '#/components/responses/415'
+        '500':
+          $ref: '#/components/responses/500'
+        '503':
+          $ref: '#/components/responses/503'
+        notModified:
+          $ref: '#/components/responses/notModified'
+        forbidden:
+          $ref: '#/components/responses/forbidden'
+        notFound:
+          $ref: '#/components/responses/notFound'
+        conflict:
+          $ref: '#/components/responses/conflict'
+      requestBody:
+        content:
+          application/json;charset=UTF-8:
+            schema:
+              $ref: '#/components/schemas/device'
+        description: >-
+          The body of the request **should** contain values for all attributes
+          of the device (`id` is unnecessary).  Any missing attribute values in
+          the body of the request will be interpreted as attributes that should
+          be removed, if possible.
+        required: true
+    patch:
+      tags:
+        - devices
+      summary: Update an existing Device
+      description: >-
+        To update one or more attributes on an existing
+        [device](speca://device), send a PATCH request to
+        `/devices/{DEVICE_ID}`. Any missing attribute values in the body of the
+        request will simply be ignored and interpreted as attributes that should
+        be left unmodified.
+
+
+        ~~~info
+
+        If the new attributes values match the existing values, there will be no
+        change to the underlying resource and the system will return `304 Not
+        Modified`.
+
+        ~~~
+
+
+        ~~~info
+
+        Built-in system devices (i.e. those that use negative values for their
+        `id` attribute) are not modifiable and, as such, will return a `403
+        Forbidden`.
+
+        ~~~
+      operationId: updateDeviceById
+      parameters:
+        - $ref: '#/components/parameters/Content-type'
+        - name: DEVICE_ID
+          in: path
+          description: >-
+            A path parameter to match against the system-generated unique
+            identifer of a device.  Note that while built-in devices have
+            negative ids, you are not permitted to replace these and, as such,
+            the path parameter is lmited to positive integers.
+          required: true
+          example: 1
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json;charset=UTF-8:
+              schema:
+                type: object
+                properties:
+                  device:
+                    $ref: '#/components/schemas/device'
+        '400':
+          $ref: '#/components/responses/400'
+        '415':
+          $ref: '#/components/responses/415'
+        '500':
+          $ref: '#/components/responses/500'
+        '503':
+          $ref: '#/components/responses/503'
+        notModified:
+          $ref: '#/components/responses/notModified'
+        forbidden:
+          $ref: '#/components/responses/forbidden'
+        notFound:
+          $ref: '#/components/responses/notFound'
+        conflict:
+          $ref: '#/components/responses/conflict'
+      requestBody:
+        content:
+          application/json;charset=UTF-8:
+            schema:
+              $ref: '#/components/schemas/device'
+        description: >-
+          The body of the request may contain any one or more `device` attribute
+          values.  Null values will be treated as request to remove the
+          attributes, if possible.  Any value for `id` will be ignored.
+        required: true
+  /assets:
+    get:
+      tags:
+        - assets
+      summary: List all Assets
+      description: >-
+        Fetches one or more [assets](speca://asset) as defined by the parameters
+        of request.
+
+
+        This will retrieve the entire list of assets that match the filters, if
+        applicable.  Since the response has the potential to be large, the
+        results will paginated, again according to the request parameters (by
+        default a maximum of 100 assets are allowed in each response).
+
+
+        The results will be returned as a JSON object with an `assets` key, the
+        value of which will be an array of [asset](speca://asset) or
+        [assetWithRelLinks](speca://assetWithRelLinks) objects, each of which
+        contain the standard asset attributes.
+      operationId: getAssets
+      parameters:
+        - $ref: '#/components/parameters/Content-type'
+        - $ref: '#/components/parameters/idFrom'
+        - $ref: '#/components/parameters/idTo'
+        - $ref: '#/components/parameters/name'
+        - name: path
+          in: query
+          description: >-
+            A request parameter that performs LIKE matching on the asset path.
+            Partial strings can be used here.
+          example: /mnt/nas
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+        - name: providerId
+          in: query
+          description: >-
+            A request parameter that matches against the asset's associated
+            provider id.
+          example: 1
+          schema:
+            type: integer
+            minimum: 1
+        - name: contentTitle
+          in: query
+          description: >-
+            A request parameter that matches against the asset's associated
+            content title.  Partial strings can be used here.
+          example: GOT_S1_E2
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+        - $ref: '#/components/parameters/sort'
+        - $ref: '#/components/parameters/detailLevel'
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/pageSize'
+      responses:
+        '200':
+          description: HTTP 200 OK - Detail "High"
+          content:
+            application/json;charset=UTF-8:
+              schema:
+                type: object
+                properties:
+                  pageLinks:
+                    $ref: '#/components/schemas/paginationLinks'
+                  pageMetadata:
+                    $ref: '#/components/schemas/pageMetadata'
+                  assets:
+                    type: array
+                    description: >-
+                      An array of assets that match the request parameters
+                      requested.
+                    items:
+                      $ref: '#/components/schemas/asset'
+        '400':
+          $ref: '#/components/responses/400'
+        '415':
+          $ref: '#/components/responses/415'
+        '500':
+          $ref: '#/components/responses/500'
+        '503':
+          $ref: '#/components/responses/503'
+        noContent:
+          $ref: '#/components/responses/noContent'
+    post:
+      tags:
+        - assets
+      summary: Create a new Asset
+      description: >-
+        To create a new [asset](speca://asset), send a POST request to
+        `/assets`.
+
+
+        When submitting the [assetWithRelLinks](speca://assetWithRelLinks) in
+        the body of the request, both the `name` and `path` attributes are
+        required.  Any value included for `id` will be ignored.
+
+
+        The `name` attribute refers to the filename of the asset on disk.
+
+        Similarly, the `path` attribute must match the path to the asset file on
+        disk.
+      operationId: createAsset
+      parameters:
+        - $ref: '#/components/parameters/Content-type'
+      responses:
+        '201':
+          description: >-
+            An Asset will be created using the provided information. The
+            response body will contain a JSON object with a key called `asset`.
+            The value will be an object containing the standard attributes for
+            your new Asset.
+          content:
+            application/json;charset=UTF-8:
+              schema:
+                type: object
+                properties:
+                  asset:
+                    $ref: '#/components/schemas/asset'
+        '400':
+          $ref: '#/components/responses/400'
+        '415':
+          $ref: '#/components/responses/415'
+        '500':
+          $ref: '#/components/responses/500'
+        '503':
+          $ref: '#/components/responses/503'
+        conflict:
+          $ref: '#/components/responses/conflict'
+      requestBody:
+        content:
+          application/json;charset=UTF-8:
+            schema:
+              $ref: '#/components/schemas/assetWithRelLinks'
+        description: >-
+          When submitting the [assetWithRelLinks](speca://assetWithRelLinks) in
+          the body of the request, both the `name` and `path` attributes are
+          required.  Any value included for `id` will be ignored.
+        required: true
+  '/assets/{ASSET_ID}':
+    get:
+      tags:
+        - assets
+      summary: Retrieve an existing Asset by id
+      description: >-
+        To show an individual [asset](speca://asset), send a GET request to
+        `/assets/{ASSET_ID}`.
+
+
+        The response will be a JSON object with a key called `asset`. This will
+        be set to a JSON object that represents the asset and its attributes.
+      operationId: getAssetById
+      parameters:
+        - $ref: '#/components/parameters/Content-type'
+        - name: ASSET_ID
+          in: path
+          description: >-
+            A path parameter to match against the system-generated unique
+            identifer of an asset.
+          required: true
+          example: 1
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json;charset=UTF-8:
+              schema:
+                type: object
+                properties:
+                  asset:
+                    $ref: '#/components/schemas/asset'
+        '400':
+          $ref: '#/components/responses/400'
+        '415':
+          $ref: '#/components/responses/415'
+        '500':
+          $ref: '#/components/responses/500'
+        '503':
+          $ref: '#/components/responses/503'
+        notFound:
+          $ref: '#/components/responses/notFound'
+    put:
+      tags:
+        - assets
+      summary: Replace an existing Asset
+      description: >-
+        To replace an existing [asset](speca://asset), send a PUT request to
+        `/assets/{ASSET_ID}`. Generally, PUT should be used to replace ALL
+        attributes of an existing asset and, as such, the body in the request
+        **should contain values for all attributes** (`id` can be omitted and
+        will be ignored if supplied).  Any missing attribute values in the body
+        of the request will be interpreted as attributes that should be removed,
+        if possible.  If you wish to update a subset of attributes on an
+        existing asset, please use the [PATCH
+        request](speca://updateAssetById).
+
+
+        ~~~info
+
+        If the new attributes values match the existing values, there will be no
+        change to the underlying resource and the system will return `304 Not
+        Modified`.
+
+        ~~~
+      operationId: replaceAssetById
+      parameters:
+        - $ref: '#/components/parameters/Content-type'
+        - name: ASSET_ID
+          in: path
+          description: >-
+            A path parameter to match against the system-generated unique
+            identifer of an asset.
+          required: true
+          example: 1
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json;charset=UTF-8:
+              schema:
+                type: object
+                properties:
+                  asset:
+                    $ref: '#/components/schemas/asset'
+        '400':
+          $ref: '#/components/responses/400'
+        '415':
+          $ref: '#/components/responses/415'
+        '500':
+          $ref: '#/components/responses/500'
+        '503':
+          $ref: '#/components/responses/503'
+        notModified:
+          $ref: '#/components/responses/notModified'
+        notFound:
+          $ref: '#/components/responses/notFound'
+        conflict:
+          $ref: '#/components/responses/conflict'
+      requestBody:
+        content:
+          application/json;charset=UTF-8:
+            schema:
+              $ref: '#/components/schemas/assetWithRelLinks'
+        description: >-
+          The body of the request **should** contain values for all attributes
+          of the asset (`id` is unnecessary).  Any missing attribute values in
+          the body of the request will be interpreted as attributes that should
+          be removed, if possible.
+        required: true
+    patch:
+      tags:
+        - assets
+      summary: Update an existing Asset
+      description: >-
+        To update one or more attributes on an existing [asset](speca://asset),
+        send a PATCH request to `/assets/{ASSET_ID}`. Any missing attribute
+        values in the body of the request will simply be ignored and interpreted
+        as attributes that should be left unmodified.
+
+
+        ~~~info
+
+        You cannot modify any related resources (e.g.
+        [provider](speca://provider), [content](speca://content)) using this
+        method as the body requires a
+        [assetWithRelLinks](speca://assetWithRelLinks).  As such, only the `id`
+        value of the related resource will be used to update the asset.
+
+        ~~~
+
+
+        ~~~info
+
+        If the new attributes values match the existing values, there will be no
+        change to the underlying resource and the system will return `304 Not
+        Modified`
+
+        ~~~
+      operationId: updateAssetById
+      parameters:
+        - $ref: '#/components/parameters/Content-type'
+        - name: ASSET_ID
+          in: path
+          description: >-
+            A path parameter to match against the system-generated unique
+            identifer of an asset.
+          required: true
+          example: 1
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json;charset=UTF-8:
+              schema:
+                type: object
+                properties:
+                  asset:
+                    $ref: '#/components/schemas/asset'
+        '400':
+          $ref: '#/components/responses/400'
+        '415':
+          $ref: '#/components/responses/415'
+        '500':
+          $ref: '#/components/responses/500'
+        '503':
+          $ref: '#/components/responses/503'
+        notModified:
+          $ref: '#/components/responses/notModified'
+        forbidden:
+          $ref: '#/components/responses/forbidden'
+        notFound:
+          $ref: '#/components/responses/notFound'
+        conflict:
+          $ref: '#/components/responses/conflict'
+      requestBody:
+        content:
+          application/json;charset=UTF-8:
+            schema:
+              $ref: '#/components/schemas/assetWithRelLinks'
+        description: >-
+          The body of the request may contain any one or more asset attribute
+          values.  Null values will be treated as request to remove the
+          attributes, if applicable.  Any value for `id` will be ignored.
+        required: true
+  /analysisTemplates:
+    get:
+      tags:
+        - analysisTemplates
+      summary: List all Analysis Templates
+      description: >-
+        Fetches one or more [analysis templates](speca://analysisTemplate) as
+        defined by the paramters of request.
+
+
+        This will retrieve all the templates that match the filters, if
+        applicable.  Since the response has the potential to be large, the
+        results will paginated, again according to the request parameters (by
+        default a maximum of 100 templates are allowed in each response).
+
+
+        The results will be returned as a JSON object with a `templates` key,
+        the value of which will be an array of [analysis
+        template](speca://analysisTemplate) or
+        [analysisTemplateWithRelLinks](speca://analysisTemplateWithRelLinks)
+        objects, each of which contain the standard template attributes.
+      operationId: getAnalysisTemplates
+      parameters:
+        - $ref: '#/components/parameters/Content-type'
+        - $ref: '#/components/parameters/idFrom'
+        - $ref: '#/components/parameters/idTo'
+        - $ref: '#/components/parameters/name'
+        - $ref: '#/components/parameters/sort'
+        - $ref: '#/components/parameters/detailLevel'
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/pageSize'
+      responses:
+        '200':
+          description: OKDetailHigh
+          content:
+            application/json;charset=UTF-8:
+              schema:
+                type: object
+                properties:
+                  pageLinks:
+                    $ref: '#/components/schemas/paginationLinks'
+                  pageMetadata:
+                    $ref: '#/components/schemas/pageMetadata'
+                  templates:
+                    type: array
+                    description: >-
+                      An array of analysis templates that match the request
+                      parameters requested.
+                    items:
+                      $ref: '#/components/schemas/analysisTemplate'
+        '400':
+          $ref: '#/components/responses/400'
+        '415':
+          $ref: '#/components/responses/415'
+        '500':
+          $ref: '#/components/responses/500'
+        '503':
+          $ref: '#/components/responses/503'
+        noContent:
+          $ref: '#/components/responses/noContent'
+    post:
+      tags:
+        - analysisTemplates
+      summary: Create a new Analysis Template
+      description: >-
+        To create a new [analysis template](speca://analysisTemplate), send a
+        POST request to `/analysisTemplates`.
+
+
+        When submitting the
+        [analysisTemplateWithRelLinks](speca://analysisTemplateWithRelLinks) in
+        the body of the request, only the `name` is required.  Any value
+        included for `id` will be ignored.
+
+
+        The `name` attribute refers to the unique analysis template name.
+      operationId: createAnalysisTemplate
+      parameters:
+        - $ref: '#/components/parameters/Content-type'
+      responses:
+        '201':
+          description: >-
+            An analysis template will be created using the provided information.
+            The response body will contain a JSON object with a key called
+            `template`. The value will be an object containing the standard
+            attributes for your new Analysis Template.
+          content:
+            application/json;charset=UTF-8:
+              schema:
+                type: object
+                properties:
+                  template:
+                    $ref: '#/components/schemas/analysisTemplate'
+        '400':
+          $ref: '#/components/responses/400'
+        '415':
+          $ref: '#/components/responses/415'
+        '500':
+          $ref: '#/components/responses/500'
+        '503':
+          $ref: '#/components/responses/503'
+        conflict:
+          $ref: '#/components/responses/conflict'
+      requestBody:
+        content:
+          application/json;charset=UTF-8:
+            schema:
+              $ref: '#/components/schemas/analysisTemplateWithRelLinks'
+        description: >-
+          The attributes to use when creating the new analysis template.  When
+          submitting the
+          [analysisTemplateWithRelLinks](speca://analysisTemplateWithRelLinks)
+          in the body of the request, only the `name` is required.  Any value
+          included for `id` will be ignored.
+        required: true
+  '/analysisTemplates/{ANALYSIS_TEMPLATE_ID}':
+    get:
+      tags:
+        - analysisTemplates
+      summary: Retrieve an existing Analysis Template by id
+      description: >-
+        To show an individual [analysis template](speca://analysisTemplate),
+        send a GET request to `/assets/{ANALYSIS_TEMPLATE_ID}`.
+
+
+        The response will be a JSON object with a key called `template`. This
+        will be set to a JSON object that represents the analysis template and
+        its attributes.
+      operationId: getAnalysisTemplateById
+      parameters:
+        - $ref: '#/components/parameters/Content-type'
+        - name: ANALYSIS_TEMPLATE_ID
+          in: path
+          description: >-
+            A path parameter to match against the system-generated unique
+            identifer of an analysis template.
+          required: true
+          example: 1
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json;charset=UTF-8:
+              schema:
+                type: object
+                properties:
+                  template:
+                    $ref: '#/components/schemas/analysisTemplate'
+        '400':
+          $ref: '#/components/responses/400'
+        '415':
+          $ref: '#/components/responses/415'
+        '500':
+          $ref: '#/components/responses/500'
+        '503':
+          $ref: '#/components/responses/503'
+        notFound:
+          $ref: '#/components/responses/notFound'
+    put:
+      tags:
+        - analysisTemplates
+      summary: Replace an existing Analysis Template
+      description: >-
+        To replace an existing [analysis template](speca://analysisTemplate),
+        send a PUT request to `/analysisTemplates/{ANALYSIS_TEMPLATE_ID}`.
+        Generally, PUT should be used to replace ALL attributes of an existing
+        template and, as such, the body in the request **should contain values
+        for all attributes** (`id` can be omitted and will be ignored if
+        supplied).  Any other missing in the body of the request will be
+        interpreted as attributes that should be removed, if possible.  If you
+        wish to update a subset of attributes on an existing template, please
+        use the [PATCH request](speca://updateAnalysisTemplateById).
+
+
+        ~~~info
+
+        If the new attributes values match the existing values, there will be no
+        change to the underlying resource and the system will return `304 Not
+        Modified`.
+
+        ~~~
+
+
+        ~~~info
+
+        Built-in analysis templates (i.e. those that use negative values for
+        their `id` attribute) are not modifiable and, as such, will return a
+        `403 Forbidden`.
+
+        ~~~
+      operationId: replaceAnalysisTemplateById
+      parameters:
+        - $ref: '#/components/parameters/Content-type'
+        - name: ANALYSIS_TEMPLATE_ID
+          in: path
+          description: >-
+            A path parameter to match against the system-generated unique
+            identifer of an asset template.  Note that while built-in analysis
+            templates have negative ids, you are not permitted to replace these
+            and, as such, the path parameter is lmited to positive integers.
+          required: true
+          example: 1
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json;charset=UTF-8:
+              schema:
+                type: object
+                properties:
+                  template:
+                    $ref: '#/components/schemas/analysisTemplate'
+        '400':
+          $ref: '#/components/responses/400'
+        '415':
+          $ref: '#/components/responses/415'
+        '500':
+          $ref: '#/components/responses/500'
+        '503':
+          $ref: '#/components/responses/503'
+        notModified:
+          $ref: '#/components/responses/notModified'
+        forbidden:
+          $ref: '#/components/responses/forbidden'
+        notFound:
+          $ref: '#/components/responses/notFound'
+        conflict:
+          $ref: '#/components/responses/conflict'
+      requestBody:
+        content:
+          application/json;charset=UTF-8:
+            schema:
+              $ref: '#/components/schemas/analysisTemplateWithRelLinks'
+        description: >-
+          The body of the request **should** contain non-null values for all
+          attributes of the template (`id` is unnecessary).  Any other missing
+          in the body of the request will be interpreted as attributes that
+          should be removed, if possible.
+        required: true
+    patch:
+      tags:
+        - analysisTemplates
+      summary: Update an existing Analysis Template
+      description: >-
+        To update one or more attributes on an existing [analysis
+        template](speca://analysisTemplate), send a PATCH request to
+        `/analysisTemplates/{ANALYSIS_TEMPLATE_ID}`. Any missing attribute
+        values in the body of the request will simply be ignored and interpreted
+        as attributes that should be left unmodified.
+
+
+        ~~~info
+
+        You cannot modify any related resources (e.g. [device](speca://device))
+        using this method as the body requires an
+        [analysisTemplateWithRelLinks](speca://analysisTemplateWithRelLinks).
+        As such, only the `id` value of the related resource will be used to
+        update the analysis template.
+
+        ~~~
+
+
+        ~~~info
+
+        If the new attributes values match the existing values, there will be no
+        change to the underlying resource and the system will return `304 Not
+        Modified`
+
+        ~~~
+
+
+        ~~~info
+
+        Built-in analysis templates (i.e. those that use negative values for
+        their `id` attribute) are not modifiable and, as such, will return a
+        `403 Forbidden`.
+
+        ~~~
+      operationId: updateAnalysisTemplateById
+      parameters:
+        - $ref: '#/components/parameters/Content-type'
+        - name: ANALYSIS_TEMPLATE_ID
+          in: path
+          description: >-
+            A path parameter to match against the system-generated unique
+            identifer of an analysis template.  Note that while  built-in
+            analysis templates have negative ids, you are not permitted to
+            update these and, as such, the path parameter is lmited to positive
+            integers.
+          required: true
+          example: 1
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json;charset=UTF-8:
+              schema:
+                type: object
+                properties:
+                  template:
+                    $ref: '#/components/schemas/analysisTemplate'
+        '400':
+          $ref: '#/components/responses/400'
+        '415':
+          $ref: '#/components/responses/415'
+        '500':
+          $ref: '#/components/responses/500'
+        '503':
+          $ref: '#/components/responses/503'
+        notModified:
+          $ref: '#/components/responses/notModified'
+        forbidden:
+          $ref: '#/components/responses/forbidden'
+        notFound:
+          $ref: '#/components/responses/notFound'
+        conflict:
+          $ref: '#/components/responses/conflict'
+      requestBody:
+        content:
+          application/json;charset=UTF-8:
+            schema:
+              $ref: '#/components/schemas/analysisTemplateWithRelLinks'
+        description: >-
+          The body of the request may contain any one or more analysis template
+          attribute values.  Null values will be treated as request to remove
+          the attributes, if applicable.  Any value for `id` will be ignored.
+        required: true
+  '/analysisTemplates/{ANALYSIS_TEMPLATE_NAME}':
+    get:
+      tags:
+        - analysisTemplates
+      summary: Retrieve an existing Analysis Template by name
+      description: >-
+        To show an individual [analysis template](speca://analysisTemplate),
+        send a GET request to `/assets/{ANALYSIS_TEMPLATE_NAME}`, where
+        `{ANALYSIS_TEMPLATE_NAME}` is an exact match to an existing template
+        name.
+
+
+        The response will be a JSON object with a key called `template`. This
+        will be set to a JSON object that represents the analysis template and
+        its attributes.
+      operationId: getAnalysisTemplateByName
+      parameters:
+        - $ref: '#/components/parameters/Content-type'
+        - name: ANALYSIS_TEMPLATE_NAME
+          in: path
+          description: >-
+            A path parameter to match against an analysis template name.  Note
+            that the name here must be full and exact match.
+          required: true
+          example: Default (SSIMWAVE)
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 200
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json;charset=UTF-8:
+              schema:
+                type: object
+                properties:
+                  template:
+                    $ref: '#/components/schemas/analysisTemplate'
+        '400':
+          $ref: '#/components/responses/400'
+        '415':
+          $ref: '#/components/responses/415'
+        '500':
+          $ref: '#/components/responses/500'
+        '503':
+          $ref: '#/components/responses/503'
+        notFound:
+          $ref: '#/components/responses/notFound'
+  /analyses:
+    get:
+      tags:
+        - analyses
+      summary: List all Analyses
+      description: >-
+        Fetches one or more [analyses](speca://analysis) as defined by the
+        paramters of request.
+
+
+        This will retrieve all the analyses that match the filters, if
+        applicable.  Since the response has the potential to be large, the
+        results will paginated, again according to the request parameters (by
+        default a maximum of 100 analyses are allowed in each response).
+
+
+        The results will be returned as a JSON object with a `analyses` key, the
+        value of which will be an array of [analysis](speca://analysis) or
+        [analysisWithRelLinks](speca://analysisWithRelLinks) objects, each of
+        which contain the standard analysis attributes.
+      operationId: getAnalyses
+      parameters:
+        - $ref: '#/components/parameters/Content-type'
+        - $ref: '#/components/parameters/idFrom'
+        - $ref: '#/components/parameters/idTo'
+        - name: description
+          in: query
+          description: >-
+            A request parameter that allows LIKE matching on the associated
+            description using a (partial) string.
+          example: AVC encoding
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+        - name: status
+          in: query
+          description: >-
+            A request parameter that allows matching on the analysis status
+            attribute.
+          example: Submitted
+          schema:
+            type: string
+            enum:
+              - Submitted
+              - Processing
+              - Completed
+              - Errored
+              - Cancelled
+        - name: referenceAssetName
+          in: query
+          description: >-
+            A request parameter that allows LIKE matching on the associated
+            reference asset's name using a (partial) string.
+          example: GOT_S1_E2
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+        - name: referenceAssetPath
+          in: query
+          description: >-
+            A request parameter that allows LIKE matching on the associated
+            reference asset's path using a (partial) string.
+          example: /mnt/nas/videos
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+        - name: subjectAssetName
+          in: query
+          description: >-
+            A request parameter that allows LIKE matching on the associated
+            subject asset's name using a (partial) string.
+          example: GOT_S1_E2
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+        - name: subjectAssetPath
+          in: query
+          description: >-
+            A request parameter that allows LIKE matching on the associated
+            subject asset's path using a (partial) string.
+          example: /mnt/nas/videos
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+        - name: templateName
+          in: query
+          description: >-
+            A request parameter that allows matching on the associated
+            template's name using a (partial) string.
+          example: Default (SSIMWAVE)
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+        - $ref: '#/components/parameters/sort'
+        - $ref: '#/components/parameters/detailLevel'
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/pageSize'
+      responses:
+        '200':
+          description: OKDetailHigh
+          content:
+            application/json;charset=UTF-8:
+              schema:
+                type: object
+                properties:
+                  pageLinks:
+                    $ref: '#/components/schemas/paginationLinks'
+                  pageMetadata:
+                    $ref: '#/components/schemas/pageMetadata'
+                  analyses:
+                    type: array
+                    description: >-
+                      An array of analyses that match the request parameters
+                      requested.
+                    items:
+                      $ref: '#/components/schemas/analysis'
+        '400':
+          $ref: '#/components/responses/400'
+        '415':
+          $ref: '#/components/responses/415'
+        '500':
+          $ref: '#/components/responses/500'
+        '503':
+          $ref: '#/components/responses/503'
+        noContent:
+          $ref: '#/components/responses/noContent'
+    post:
+      tags:
+        - analyses
+      summary: Submit a new Analysis for processing new Assets
+      description: >-
+        To create and submit a new [analysis](speca://analysis) for processing
+        new assets, send a POST request to `/analyses`.  This endpoint is
+        slightly different than the other [POST
+        signature](speca://createAnalysisForExistingAssets) in that this
+        endpoint does not require that the assets be pre-existing in the system
+        and will, instead, create assets for the subject and reference, if
+        available.
+
+
+        Since both no-reference and full-reference analyses require a subject
+        asset, the `subjectAssetName` and `subjectAssetPath` are required
+        parameters.
+
+        For full-reference analyses, the referenceAssetName and
+        referenceAssetPath are required.  Regardless, an asset name must be
+        accompanied by its related path otherwise a 404 Error will be returned.
+
+
+        These additional attributes can also optionally be used:
+
+         - `description` - Applies a text description to the analysis
+         - `templateId` - Identifies a template for controlling the parameters of the analysis
+
+        ~~~info
+
+        If a template is not specified, the system will a default template.
+
+        ~~~
+      operationId: createAnalysisForNewAssets
+      parameters:
+        - $ref: '#/components/parameters/Content-type'
+      responses:
+        '201':
+          description: >-
+            An analysis will be created using the provided attributes and
+            submitted to the SSIMPLUS VOD Monitor for execution.  The response
+            body will contain a JSON object with a key called 'analysis'. The
+            value will be an object containing the standard attributes for your
+            new Analysis.
+          content:
+            application/json;charset=UTF-8:
+              schema:
+                type: object
+                properties:
+                  analysis:
+                    $ref: '#/components/schemas/analysis'
+        '400':
+          $ref: '#/components/responses/400'
+        '415':
+          $ref: '#/components/responses/415'
+        '500':
+          $ref: '#/components/responses/500'
+        '503':
+          $ref: '#/components/responses/503'
+      requestBody:
+        content:
+          application/json;charset=UTF-8:
+            schema:
+              type: object
+              properties:
+                subjectAssetName:
+                  type: string
+                  description: The filename that represents the subject asset on disk.
+                  maxLength: 500
+                  minLength: 1
+                  example: GOT_S2_EP1_360p@100kbps.mp4
+                subjectAssetPath:
+                  type: string
+                  description: The path to the subject asset on disk.
+                  maxLength: 500
+                  minLength: 1
+                  example: /mnt/nas/videos
+                referenceAssetName:
+                  type: string
+                  description: The filename that represents the reference asset on disk.
+                  maxLength: 500
+                  minLength: 1
+                  example: GOT_S2_EP1.mov
+                referenceAssetPath:
+                  type: string
+                  description: The path to the reference asset on disk.
+                  maxLength: 500
+                  minLength: 1
+                  example: /mnt/nas/videos
+                templateId:
+                  $ref: '#/components/schemas/objectIdentifer'
+                description:
+                  type: string
+                  description: >-
+                    A description of the analysis which can be for reference,
+                    categorization and searching/filtering.
+                  maxLength: 500
+                  minLength: 1
+                  example: Capturing results of AVC transcoding.
+              required:
+                - subjectAssetName
+                - subjectAssetPath
+        description: >-
+          When submitting the
+          [analysisWithRelLinks](speca://analysisWithRelLinks) in the body of
+          the request, only the `subjectAssetId` is required for a no-refernce
+          analysis.  For a full-reference analysis, `referenceAssetId` is also
+          required.  Any value included for `id` will be ignored.
+        required: true
+  '/analyses/{ANALYSIS_ID}':
+    get:
+      tags:
+        - analyses
+      summary: Retrieve an existing Analysis by id
+      description: >-
+        To show an individual `analysis`, send a GET request to
+        `/analyses/{ANALYSIS_ID}`.
+
+
+        The response will be a JSON object with a key called `analysis`. This
+        will be set to a JSON object that represents the analysis and its
+        attributes.
+      operationId: getAnalysisById
+      parameters:
+        - $ref: '#/components/parameters/Content-type'
+        - name: ANALYSIS_ID
+          in: path
+          description: >-
+            A path parameter to match against the system-generated unique
+            identifer of an analysis.
+          required: true
+          example: 1
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json;charset=UTF-8:
+              schema:
+                type: object
+                properties:
+                  analysis:
+                    $ref: '#/components/schemas/analysis'
+        '400':
+          $ref: '#/components/responses/400'
+        '415':
+          $ref: '#/components/responses/415'
+        '500':
+          $ref: '#/components/responses/500'
+        '503':
+          $ref: '#/components/responses/503'
+        notFound:
+          $ref: '#/components/responses/notFound'
+    patch:
+      tags:
+        - analyses
+      summary: Update an existing Analysis
+      description: >-
+        To update an existing [analysis](speca://analysis), send a PATCH request
+        to `/analyses/{ANALYSIS_ID}`.
+
+
+        An analysis supports modification only of the following attributes:
+
+         - `description` - Can be changed at any time regardless of the state of the analysis.
+         - `status` - Can be modified by the user according to the allowed transitions described in [AnalysisStatus](speca://analysisStatus).
+
+        ~~~info
+
+        If the new attributes values match the existing values, there will be no
+        change to the underlying resource and the system will return `304 Not
+        Modified`.
+
+
+        If an invalid state transition is attempted, the system will return `409
+        Conflict`.
+
+        ~~~
+      operationId: updateAnalysisById
+      parameters:
+        - $ref: '#/components/parameters/Content-type'
+        - name: ANALYSIS_ID
+          in: path
+          description: >-
+            A path parameter to match against the system-generated unique
+            identifer of an analysis.
+          required: true
+          example: 1
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json;charset=UTF-8:
+              schema:
+                type: object
+                properties:
+                  analysis:
+                    $ref: '#/components/schemas/analysis'
+        '400':
+          $ref: '#/components/responses/400'
+        '415':
+          $ref: '#/components/responses/415'
+        '500':
+          $ref: '#/components/responses/500'
+        '503':
+          $ref: '#/components/responses/503'
+        notModified:
+          $ref: '#/components/responses/notModified'
+        notFound:
+          $ref: '#/components/responses/notFound'
+        conflict:
+          $ref: '#/components/responses/conflict'
+      requestBody:
+        content:
+          application/json;charset=UTF-8:
+            schema:
+              type: object
+              properties:
+                description:
+                  type: string
+                  description: >-
+                    A description of the analysis which can be for reference,
+                    categorization and searching/filtering.
+                  maxLength: 500
+                  minLength: 1
+                  example: Capturing results of AVC transcoding.
+                status:
+                  $ref: '#/components/schemas/analysisStatus'
+        required: true
+  /results:
+    get:
+      tags:
+        - results
+      summary: List all Results
+      description: >-
+        Fetches one or more [results](speca://result) as defined by the
+        paramters of request.
+
+
+        This will retrieve all the results that match the filters, if
+        applicable.  Since the response has the potential to be large, the
+        results will paginated, again according to the request parameters (by
+        default a maximum of 100 results are allowed in each response).
+
+
+        The results will be returned as a JSON object with a `results` key, the
+        value of which will be an array of [result](speca://result) objects,
+        each of which contain the standard result attributes.
+      operationId: getResults
+      parameters:
+        - $ref: '#/components/parameters/Content-type'
+        - $ref: '#/components/parameters/idTo'
+        - $ref: '#/components/parameters/idFrom'
+        - name: verdict
+          in: query
+          description: Filters verdicts based on the supplied verdict value.
+          example: Pass
+          schema:
+            type: string
+            enum:
+              - Pass
+              - Fail
+        - name: analysisId
+          in: query
+          description: >-
+            Filters results based on matching the supplied parameter against the
+            unique identifier for the associated analysis.
+          example: 1
+          schema:
+            type: integer
+        - $ref: '#/components/parameters/sort'
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/pageSize'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json;charset=UTF-8:
+              schema:
+                type: object
+                properties:
+                  pageLinks:
+                    $ref: '#/components/schemas/paginationLinks'
+                  pageMetadata:
+                    $ref: '#/components/schemas/pageMetadata'
+                  results:
+                    type: array
+                    description: >-
+                      An array of results that match the request parameters
+                      requested.
+                    items:
+                      $ref: '#/components/schemas/result'
+        '400':
+          $ref: '#/components/responses/400'
+        '415':
+          $ref: '#/components/responses/415'
+        '500':
+          $ref: '#/components/responses/500'
+        '503':
+          $ref: '#/components/responses/503'
+        noContent:
+          $ref: '#/components/responses/noContent'
+  '/results/{RESULT_ID}':
+    get:
+      tags:
+        - results
+      summary: Retrieve a Result by id
+      description: >-
+        To show an individual [result](speca://result), send a GET request to
+        `/results/{RESULT_ID}`.
+
+
+        The response will be a JSON object with a key called `result`. This will
+        be set to a JSON object that represents the result and its attributes.
+      operationId: getResultById
+      parameters:
+        - $ref: '#/components/parameters/Content-type'
+        - name: RESULT_ID
+          in: path
+          description: >-
+            A path parameter to match against the system-generated unique
+            identifer of a result.
+          required: true
+          example: 1
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json;charset=UTF-8:
+              schema:
+                type: object
+                properties:
+                  result:
+                    $ref: '#/components/schemas/result'
+        '400':
+          $ref: '#/components/responses/400'
+        '415':
+          $ref: '#/components/responses/415'
+        '500':
+          $ref: '#/components/responses/500'
+        '503':
+          $ref: '#/components/responses/503'
+        notFound:
+          $ref: '#/components/responses/notFound'
+  '/results/{RESULT_ID}/framescores':
+    get:
+      tags:
+        - results
+      summary: List all Frame Scores for a Result
+      description: >-
+        Fetches the [frame scores](speca://frameScore) associated with the
+        [result](speca://result).
+
+
+        This will retrieve all the frame scores for a given result.  Since the
+        response has the potential to be large, the results will paginated,
+        again according to the request parameters (by default a maximum of 100
+        frame scores are allowed in each response).
+
+
+        The results will be returned as a JSON object with a `frameScores` key,
+        the value of which will be an array of [frame score](speca://frameScore)
+        objects, each of which contains the standard frame score attributes.
+      operationId: getResultFrameScores
+      parameters:
+        - $ref: '#/components/parameters/Content-type'
+        - name: RESULT_ID
+          in: path
+          description: >-
+            A path parameter to match against the system-generated unique
+            identifer of a result.
+          required: true
+          example: 1
+          schema:
+            type: integer
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/pageSize'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json;charset=UTF-8:
+              schema:
+                type: object
+                properties:
+                  pageLinks:
+                    $ref: '#/components/schemas/paginationLinks'
+                  pageMetadata:
+                    $ref: '#/components/schemas/pageMetadata'
+                  frameScores:
+                    type: array
+                    description: >-
+                      An array of frame scores that match the request parameters
+                      requested.
+                    items:
+                      $ref: '#/components/schemas/frameScore'
+        '400':
+          $ref: '#/components/responses/400'
+        '415':
+          $ref: '#/components/responses/415'
+        '500':
+          $ref: '#/components/responses/500'
+        '503':
+          $ref: '#/components/responses/503'
+        noContent:
+          $ref: '#/components/responses/noContent'
+        notFound:
+          $ref: '#/components/responses/notFound'
+servers:
+  - url: 'http://localhost/api/vod'
+components:
+  parameters:
+    page:
+      name: page
+      in: query
+      description: The page number or offset when dealing with paged responses.
+      example: 1
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    pageSize:
+      name: pageSize
+      in: query
+      description: >-
+        The number of data items to return in a single response.  If not
+        specified, the default size of 100 will be enforced.
+      example: 100
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 100
+    idFrom:
+      name: idFrom
+      in: query
+      description: >-
+        The lower-bound of a request parameter filtering based on unique object
+        identifier.
+      example: 1
+      schema:
+        type: integer
+    idTo:
+      name: idTo
+      in: query
+      description: >-
+        The upper-bound of a request parameter filtering based on unique object
+        identifier.
+      example: 1
+      schema:
+        type: integer
+    name:
+      name: name
+      in: query
+      description: >-
+        A request parameter that allows LIKE matching on the object's name using
+        a partial name string.
+      example: GOT_S2_EP1 (Asset)
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 100
+    sort:
+      name: sort
+      in: query
+      description: >-
+        Allows the user to specify the object attribute on which to sort and the
+        direction (ascending/descending).  To sort in ascending order preface
+        your sort field with the '+' symbol and to sort in descending order use
+        the '-' symbol.  Typically all single-valued attributes are valid for
+        sorting, unless otherwise indicated on the resource itself.
+      example: +id (ascending sort on 'id')
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 100
+    detailLevel:
+      name: detailLevel
+      in: query
+      description: >-
+        Controls the detail level to return for associated or related resources
+        on a given resource.  Specifying a `Low` detail level will return only
+        the unique `id`s associated with each related resource.  Specifying a
+        `High` detail level will return all attributes on each related
+        resource.  When this parameter is omitted, the system will default to
+        using `Low` detail.
+
+
+        ~~~info
+
+        Only applies to GET operations that return collections of resources.
+
+        ~~~
+      example: High
+      schema:
+        type: string
+        enum:
+          - Low
+          - High
+        default: Low
+    Content-type:
+      name: Content-type
+      in: header
+      required: true
+      example: application/json;charset=UTF-8
+      schema:
+        type: string
+        default: application/json;charset=UTF-8
+  responses:
+    '204':
+      description: >-
+        The server successfully processed the request, but is not returning any
+        content.
+    '304':
+      description: >-
+        Used in response to a PUT or PATCH which does not result in the resource
+        being modified because the attributes have not changed.
+    '400':
+      description: >-
+        The request could not be understood by the server due to malformed
+        syntax. The client SHOULD NOT repeat the request without modifications.
+    '403':
+      description: >-
+        The server understood the request, but is refusing to fulfill it.
+        Authorization will not help and the request SHOULD NOT be repeated.
+    '404':
+      description: >-
+        Used when the user is trying to access a non-existent resource or
+        endpoint but other parts of the request are correctly formed.
+    '409':
+      description: >-
+        Indicates that the request could not be processed because of a conflict
+        in the request, such as an edit conflict.
+    '415':
+      description: >-
+        Used when the request is asking for a content-type that is not supported
+        (i.e. XML when you only support JSON).  The SSIMWAVE VOD Monitor REST
+        API currently only supports JSON content-type (i.e. application/json).
+    '500':
+      description: >-
+        The server encountered an unexpected condition which prevented it from
+        fulfilling the request.
+    '503':
+      description: >-
+        The server is currently unable to handle the request due to a temporary
+        overloading or maintenance of the server. The implication is that this
+        is a temporary condition which will be alleviated after some delay.
+  schemas:
+    device:
+      type: object
+      description: >-
+        Represents the target device for which the transcoding of the asset was
+        performed.  Devices can be included in the template when performing a
+        SSIMWAVE analysis and the scores will take the properties of the device
+        into consideration when generating scores.
+      properties:
+        id:
+          $ref: '#/components/schemas/objectIdentifer'
+          readOnly: true
+        name:
+          type: string
+          description: 'A unique, mixed-case, name for a device.'
+          maxLength: 100
+          minLength: 1
+          example: OLED55B6P
+        category:
+          $ref: '#/components/schemas/deviceCategory'
+        manufacturer:
+          type: string
+          description: The manufacturer of the viewer device.
+          maxLength: 200
+          minLength: 1
+          example: LG
+        resolution:
+          $ref: '#/components/schemas/resolution'
+        pixelAspectRatio:
+          $ref: '#/components/schemas/pixelAspectRatio'
+        luminance:
+          type: integer
+          description: >-
+            Luminance is a photometric measure of the luminous intensity per
+            unit area of light travelling in a given direction.  This value
+            reprsents the luminance (measured in nits) of the device's screen.
+          maximum: 20000
+          minimum: 1
+          example: 200
+        hdrFormats:
+          type: array
+          description: A list of supported HDR formats
+          items:
+            $ref: '#/components/schemas/hdrFormat'
+          example: '["HLG", "DolbyVision"]'
+      required:
+        - id
+        - name
+        - category
+        - resolution
+    deviceCategory:
+      type: string
+      description: 'The list of avialable viewer [device](speca://device) categories.'
+      example: TV
+      enum:
+        - TV
+        - Phone
+        - Tablet
+        - Laptop
+        - Monitor
+        - IFE
+        - Other
+    hdrFormat:
+      type: string
+      description: High Dynamic Range (HDR) format
+      example: HDR10
+      enum:
+        - HDR10
+        - HDR10+
+        - HLG
+        - DolbyVision
+    resolution:
+      type: object
+      description: >-
+        Captures the resolution, in pixels, of a viewer device.
+
+
+        Resolutions for most consumer devices will follow standards (i.e. HD
+        1920x1080) however SSIMWAVE does support the creation of custom devices
+        with non-standard resolutions.
+      properties:
+        width:
+          type: integer
+          description: The number of pixels on the x-axis.
+          minimum: 1
+          example: 1920
+        height:
+          type: integer
+          description: The number of pixesl on the y-axis.
+          minimum: 1
+          example: 1080
+      required:
+        - width
+        - height
+    pageMetadata:
+      type: object
+      description: >-
+        This object contains page/pagination information about the response
+        itself.  The `size` object contains the total number of objects
+        contained in the repsonse.  Consumers can use this value to aid when
+        iterating over the results.
+      properties:
+        size:
+          type: integer
+          description: The number of objects cotntained in the response.
+          example: 1
+    paginationLinks:
+      type: object
+      description: >-
+        The links for `self`, `previous` and `next` for any list of resources
+        returned in a paged response.  Depending on the number of resources that
+        exist in the system and the page number associated with the reponse,
+        `previous` and `next` may or may not be avaiable.  The `self` link will
+        always be provided.
+      properties:
+        self:
+          type: string
+          format: uri
+          description: A link to the current page.
+          readOnly: true
+          example: 'http://localhost:9001/api/vod/XXXX&page=10&pageSize=100'
+        previous:
+          type: string
+          format: uri
+          description: A link to the logical previous page to the one we are currently on.
+          readOnly: true
+          example: 'http://localhost:9001/api/vod/XXXX&page=9&pageSize=100'
+        next:
+          type: string
+          format: uri
+          description: A link to the logical next page to the one we are currently on.
+          readOnly: true
+          example: 'http://localhost:9001/api/vod/XXXX&page=11&pageSize=100'
+      required:
+        - self
+    videoAspectRatio:
+      type: string
+      description: The device's screen aspect ratio.
+      example: '16:9'
+      enum:
+        - '4:3'
+        - '16:9'
+        - '18:9'
+        - '21:9'
+        - '36:10'
+    pixelAspectRatio:
+      type: string
+      description: >-
+        Represents the pixel aspect ratio (PAR) which is a mathematical ratio
+        describing how the widge of a pixel compares to its height.
+      example: '10:11'
+      enum:
+        - '4:3'
+        - '10:11'
+        - '12:11'
+        - '16:11'
+        - '16:15'
+        - '65:45'
+        - '40:33'
+    error:
+      type: object
+      description: The general error structure used throughout this API.
+      properties:
+        id:
+          $ref: '#/components/schemas/objectIdentifer'
+          readOnly: true
+        description:
+          type: string
+          description: 'A description of the error and options for rememdy, if applicable.'
+          example: >-
+            The analysis could not be completed due to low system resources on
+            the work node.  Please resubmit the analysis at a later time.
+      required:
+        - id
+        - description
+    asset:
+      type: object
+      description: >-
+        A video that can be analyzed by the SSIMPLUS VOD Monitor.  Assets can
+        represent content at any stage in the delivery pipeline.  In the early
+        stages of the pipeline, content may be represented by a pristine or
+        mezzanine asset which is then transcoded into various compressed content
+        (i.e. a transcode ladder). In this example, each transcoded video file
+        would represent an asset, as would the mezzanine file, and one would be
+        free to compare these transcoded assets against the source asset using
+        SSIMPLUS.
+      properties:
+        id:
+          $ref: '#/components/schemas/objectIdentifer'
+          readOnly: true
+        name:
+          type: string
+          description: >-
+            The filename that represents the video content.  Although not
+            required, one is encouraged to keep filenames unique, where
+            possible.
+          maxLength: 500
+          minLength: 1
+          example: GOT_S2_EP1_360p@100kbps.mp4
+        path:
+          type: string
+          description: >-
+            The path to the asset's file representation on disk.  The
+            combination of the path and filename of a given asset must be
+            unique.
+          maxLength: 500
+          minLength: 1
+          example: /mnt/nas/videos
+        provider:
+          $ref: '#/components/schemas/provider'
+        content:
+          $ref: '#/components/schemas/content'
+      required:
+        - id
+        - name
+        - path
+    assetWithRelLinks:
+      type: object
+      description: >-
+        A video that can be analyzed by the SSIMPLUS VOD Monitor.  Assets can
+        represent content at any stage in the delivery pipeline.  In the early
+        stages of the pipeline, content may be represented by a pristine or
+        mezzanine asset which is then transcoded into various compressed content
+        (i.e. a transcode ladder). In this example, each transcoded video file
+        would represent an asset, as would the mezzanine file, and one would be
+        free to compare these transcoded assets against the source asset using
+        SSIMPLUS.
+
+
+        ~~~info
+
+        This object is indentical to a full [asset](speca://asset) but uses `id`
+        references for all related entities.
+
+        ~~~
+      properties:
+        id:
+          $ref: '#/components/schemas/objectIdentifer'
+          readOnly: true
+        name:
+          type: string
+          description: >-
+            The filename that represents the video content.  Although not
+            required, one is encouraged to keep filenames unique, where
+            possible.
+          maxLength: 500
+          minLength: 1
+          example: GOT_S2_EP1_360p@100kbps.mp4
+        path:
+          type: string
+          description: >-
+            The path to the asset's file representation on disk.  The
+            combination of the path and filename of a given asset must be
+            unique.
+          maxLength: 500
+          minLength: 1
+          example: /mnt/nas/videos
+        providerId:
+          $ref: '#/components/schemas/objectIdentifer'
+        contentId:
+          $ref: '#/components/schemas/objectIdentifer'
+      required:
+        - id
+        - name
+        - path
+    provider:
+      type: object
+      description: >-
+        Represents the entity (i.e. company, distributor, individual)
+        responsible for providing the video [asset](speca://asset).
+      properties:
+        id:
+          $ref: '#/components/schemas/objectIdentifer'
+          readOnly: true
+        name:
+          type: string
+          description: 'A unique, mixed-case, name for a provider.'
+          maxLength: 100
+          minLength: 1
+          example: Home Box Office (HBO)
+      required:
+        - id
+        - name
+    content:
+      type: object
+      description: >-
+        Represents a description of the content represented by a given
+        [asset](speca://asset).  Typically, content refers to the title of the
+        video.
+
+        ~~~info
+
+        Please note that you can have multiple assets encoded at various
+        resolutions and bitrates that all represent the same content.
+
+        ~~~
+      properties:
+        id:
+          $ref: '#/components/schemas/objectIdentifer'
+          readOnly: true
+        title:
+          type: string
+          description: 'A unique, mixed-case, title for the video content.'
+          maxLength: 200
+          minLength: 1
+          example: Game of Thrones Season 2 Episode 1
+      required:
+        - id
+        - title
+    analysisTemplate:
+      type: object
+      description: >-
+        A template which can be used to customize the way a given analysis
+        should be run.  Using a template, for example, a user can pick the
+        viewer devices to be considered when producing video scores or whether
+        the SSIMWAVE VOD Monitor should perform auto alignment between reference
+        and subject assets.  For any analysis the user can choose to use an
+        existing template in its entirety or as a base on top of which any given
+        attribute can be overridden.
+      properties:
+        id:
+          $ref: '#/components/schemas/objectIdentifer'
+          readOnly: true
+        name:
+          type: string
+          description: 'A unique, mixed-case, name for the template.'
+          maxLength: 200
+          minLength: 1
+          example: Default (SSIMWAVE)
+        devices:
+          type: array
+          description: The list of devices associated with the template.
+          minItems: 1
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/device'
+          example: |-
+            [
+                {
+                    "id": 1,
+                    "name": "OLED55B6P",
+                    "category": "TV",
+                    "manufacturer": "LG",
+                    "resolution": {
+                        "width": 1920,
+                        "height": 1080
+                    },
+                    "pixelAspectRatio": "10:11",
+                    "luminance": 200,
+                    "hdrFormats": [
+                        "HDR10"
+                    ]
+                }
+            ]
+        autoAlignment:
+          type: boolean
+          description: >-
+            Controls whether or not SSIMWAVE VOD Monitor should attempt to
+            automatically align reference and subject assets.
+          example: true
+          default: true
+        frameSkip:
+          type: integer
+          description: >-
+            Controls how many frames the SSIMWAVE VOD Monitor should skip when
+            decoding and processing a given asset.
+          maximum: 16
+          minimum: 0
+          example: 1
+          default: 0
+      required:
+        - id
+        - name
+    analysisTemplateWithRelLinks:
+      type: object
+      description: >-
+        A template which can be used to customize the way a given analysis
+        should be run.  Using a template, for example, a user can pick the
+        viewer devices to be considered when producing video scores or whether
+        the SSIMWAVE VOD Monitor should perform auto alignment between reference
+        and subject assets.  For any analysis the user can choose to use an
+        existing template in its entirety or as a base on top of which any given
+        attribute can be overridden.
+
+
+        ~~~info
+
+        This object is indentical to a full [analysis
+        template](speca://analysisTemplate) but uses `id` references for all
+        related entities.
+
+        ~~~
+      properties:
+        id:
+          $ref: '#/components/schemas/objectIdentifer'
+          readOnly: true
+        name:
+          type: string
+          description: 'A unique, mixed-case, name for the template.'
+          maxLength: 200
+          minLength: 1
+          example: Default (SSIMWAVE)
+        devices:
+          type: array
+          description: The list of device identifiers associated with the template.
+          minItems: 1
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/objectIdentifer'
+          example: |-
+            [
+                1, 2, 3
+            ]
+        autoAlignment:
+          type: boolean
+          description: >-
+            Controls whether or not SSIMWAVE VOD Monitor should attempt to
+            automatically align reference and subject assets.
+          readOnly: true
+          example: true
+          default: true
+        frameSkip:
+          type: integer
+          description: >-
+            Controls how many frames the SSIMWAVE VOD Monitor should skip when
+            decoding and processing a given asset.
+          maximum: 16
+          minimum: 0
+          example: 1
+          default: 0
+      required:
+        - id
+        - name
+    analysisStatus:
+      type: string
+      description: >-
+        Captures the possible states for an [Analysis](speca://analysis).  Every
+        analysis adheres to the following state machine:
+      example: Submitted
+      enum:
+        - Submitted
+        - Processing
+        - Completed
+        - Errored
+        - Cancelled
+    analysis:
+      type: object
+      description: >-
+        Represents the process by which videos [assets](speca://asset) are
+        analyzed and scores are produced using SSIMWAVE VOD Monitor.  A
+        no-reference (NR) analysis is performed on a single video asset only and
+        its [results](speca://result) can be used to judge the quality of the
+        asset in isoliation.  A full-reference (FR) analysis is performed using
+        two video assets: a reference asset against which you will compare a
+        subject asset.  Generally, the reference asset is the higher quality
+        video and the subject asset is the resulting video having gone through
+        some kind of transcoding, compression or general transformation.  A
+        full-reference analysis will be able to give you scores on the abosolute
+        quality of each asset as well as the comparitive quality, so you can
+        ascertain the impact of the transformation process on the overall
+        quality.
+      properties:
+        id:
+          $ref: '#/components/schemas/objectIdentifer'
+          readOnly: true
+        description:
+          type: string
+          description: >-
+            A description of the analysis which can be for reference,
+            categorization and searching/filtering.
+          maxLength: 500
+          minLength: 1
+          example: Capturing results of AVC transcoding.
+        status:
+          $ref: '#/components/schemas/analysisStatus'
+        submissionTimestamp:
+          type: string
+          format: date-time
+          description: >-
+            The timestamp recording when the analysis was submitted for
+            analysis.
+          example: '2018-01-01 14:20:22'
+        processingStartedTimestamp:
+          type: string
+          format: date-time
+          description: The timestamp recording when the analysis started processing.
+          example: '2018-01-01 14:20:22'
+        processingStoppedTimestamp:
+          type: string
+          format: date-time
+          description: >-
+            The timestamp recording when the analysis stopped processing,
+            regardless of the reason.  An anlysis can transition out of the
+            "processing" state for any nubmer of reasons (user cancelled
+            analysis, analysis errored, analysis completed successfully).
+          example: '2018-01-01 14:20:22'
+        noReference:
+          type: boolean
+          description: >-
+            Captures whether the analysis is a no-reference (NR).  No-reference
+            analyses do not have a value for referenceAsset.
+          example: 'false'
+        subjectAsset:
+          $ref: '#/components/schemas/asset'
+        referenceAsset:
+          $ref: '#/components/schemas/asset'
+        template:
+          $ref: '#/components/schemas/analysisTemplate'
+        result:
+          $ref: '#/components/schemas/result'
+      required:
+        - id
+        - status
+        - submissionTimestamp
+        - noReference
+        - subjectAsset
+        - template
+    analysisWithRelLinks:
+      type: object
+      description: >-
+        Represents the process by which videos [assets](speca://asset) are
+        analyzed and scores are produced using SSIMWAVE VOD Monitor.  A
+        no-reference (NR) analysis is performed on a single video asset only and
+        its [results](speca://result) can be used to judge the quality of the
+        asset in isoliation.  A full-reference (FR) analysis is performed using
+        two video assets: a reference asset against which you will compare a
+        subject asset.  Generally, the reference asset is the higher quality
+        video and the subject asset is the resulting video having gone through
+        some kind of transcoding, compression or general transformation.  A
+        full-reference analysis will be able to give you scores on the abosolute
+        quality of each asset as well as the comparitive quality, so you can
+        ascertain the impact of the transformation process on the overall
+        quality.
+
+
+        ~~~info
+
+        This object is indentical to a full [analysis](speca://analysis) but
+        uses `id` references for all related resources.
+
+        ~~~
+      properties:
+        id:
+          $ref: '#/components/schemas/objectIdentifer'
+          readOnly: true
+        description:
+          type: string
+          description: >-
+            A description of the analysis which can be for reference,
+            categorization and searching/filtering.
+          maxLength: 500
+          minLength: 1
+          example: Capturing results of AVC transcoding.
+        status:
+          $ref: '#/components/schemas/analysisStatus'
+        submissionTimestamp:
+          type: string
+          format: date-time
+          description: >-
+            The timestamp recording when the analysis was submitted for
+            analysis.
+          example: '2018-01-01 14:20:22'
+        processingStartedTimestamp:
+          type: string
+          format: date-time
+          description: The timestamp recording when the analysis started processing.
+          example: '2018-01-01 14:20:22'
+        processingStoppedTimestamp:
+          type: string
+          format: date-time
+          description: >-
+            The timestamp recording when the analysis stopped processing,
+            regardless of the reason.  An anlysis can transition out of the
+            "processing" state for any nubmer of reasons (user cancelled
+            analysis, analysis errored, analysis completed successfully).
+          example: '2018-01-01 14:20:22'
+        noReference:
+          type: boolean
+          description: >-
+            Captures whether the analysis is a no-reference (NR).  No-reference
+            analyses do not have a value for referenceAsset.
+          example: 'false'
+        subjectAssetId:
+          $ref: '#/components/schemas/objectIdentifer'
+        referenceAssetId:
+          $ref: '#/components/schemas/objectIdentifer'
+        templateId:
+          $ref: '#/components/schemas/objectIdentifer'
+        resultId:
+          $ref: '#/components/schemas/objectIdentifer'
+      required:
+        - id
+        - status
+        - submissionTimestamp
+        - noReference
+        - subjectAssetId
+        - templateId
+    result:
+      type: object
+      description: >-
+        Represents the result (video frame scores, audio quality scores etc.) of
+        an [analysis](speca://analysis).  In addition to quality scores, each
+        result has an associated [verdict](speca://verdict) which indicates
+        whether it, and its associated analysis, were successful in meeting all
+        required criteria.
+      properties:
+        id:
+          $ref: '#/components/schemas/objectIdentifer'
+          readOnly: true
+        analysisId:
+          $ref: '#/components/schemas/objectIdentifer'
+          readOnly: true
+        numVideoFrameScores:
+          type: integer
+          description: The number of video frame scores associated with this result.
+          minimum: 0
+          readOnly: true
+        verdict:
+          $ref: '#/components/schemas/verdict'
+          readOnly: true
+      required:
+        - id
+        - analysisId
+        - numVideoFrameScores
+        - verdict
+    objectIdentifer:
+      type: integer
+      description: >-
+        A unique system-generated integer identifier.  Pre-loaded system objects
+        that are not available for modification or deletion will have negative
+        values here.
+      example: 1
+    verdict:
+      type: string
+      description: >-
+        Captures the final pass/fail state of a analysis result.  Many factors
+        may contribute to the logic behind determining a pass and/or fail..
+      example: Pass
+      enum:
+        - Pass
+        - Fail
+    frameScore:
+      type: object
+      description: >-
+        Captures the SSIMWAVE absolute quality and perceptual fidelity video
+        scores for a single subject-reference [asset](speca://asset) frame
+        combination (or single subject frame for results of a no-reference
+        analysis) and a given [device](speca://device) used in the
+        [analysis](speca://analysis).  A result will have a frame score for
+        every frame analyzed and for each viewer device in the associated
+        [analysis template](speca://analysisTemplate).
+      properties:
+        referenceFrame:
+          type: integer
+          format: int64
+          description: >-
+            The frame number from the reference asset on the associated
+            [analysis](speca://analysis).
+          minimum: 1
+          readOnly: true
+          example: 1
+        subjectFrame:
+          type: integer
+          format: int64
+          description: >-
+            The frame number from the subject asset on the associated
+            [analysis](speca://analysis).
+          minimum: 1
+          readOnly: true
+          example: 1
+        deviceId:
+          $ref: '#/components/schemas/objectIdentifer'
+          readOnly: true
+        absoluteQualityScore:
+          type: integer
+          description: The SSIMWAVE absolute quality score for a given frame.
+          maximum: 100
+          minimum: 0
+          readOnly: true
+          example: 85
+        perceptualFidelityScore:
+          type: integer
+          description: >-
+            The SSIMWAVE perceptual fidelity score for a given frame.  This is a
+            quality measurement how closely the subject [asset](speca://asset)
+            matches the reference asset.  PF scores are not available for the
+            results of a no-reference [analysis](speca://analysis).
+          maximum: 100
+          minimum: 0
+          readOnly: true
+          example: 95
+      required:
+        - subjectFrame
+        - deviceId

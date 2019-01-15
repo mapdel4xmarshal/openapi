@@ -1,0 +1,17 @@
+{
+  "name": "NEXTGEN API",
+  "version": "2.0.0",
+  "dependencies": {
+    "body-parser": "^1.18.3",
+    "express": "^4.16.4",
+    "request": "^2.88.0"
+  },
+  "devDependencies": {
+    "fs-extra": "^7.0.1",
+    "handlebars": "^4.0.12",
+    "json-schema-ref-parser": "^6.0.2",
+    "openapi-schema-validation": "^0.4.2",
+    "openapi-schema-validator": "^3.0.2",
+    "supertest": "^3.3.0"
+  }
+}

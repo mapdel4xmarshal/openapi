@@ -1,0 +1,434 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "SSIMWAVE LIVEMONITOR API",
+    "version": "1.0.0",
+    "contact": {
+      "name": "SSIMWAVE",
+      "email": "support@ssimave.com"
+    },
+    "description": "This is an initial version of SSIMWAVE LIVEMONITOR API"
+  },
+  "security": [
+    {
+      "securityScheme": []
+    }
+  ],
+  "servers": [
+    {
+      "url": "/api/",
+      "description": "The production API server"
+    },
+    {
+      "url": "{protocol}://{serverIP}:{port}/api/{path}",
+      "description": "The production API server",
+      "variables": {
+        "serverIP": {
+          "description": "This the app-node (server) ip address or url",
+          "default": "localhost",
+          "enum": [
+            "localhost"
+          ]
+        },
+        "protocol": {
+          "default": "https",
+          "enum": [
+            "https",
+            "wss"
+          ]
+        },
+        "port": {
+          "description": "This is the port number where the UI is being served",
+          "default": "9191",
+          "enum": [
+            "9191",
+            "9192"
+          ]
+        },
+        "path": {
+          "description": "This is the base path where the api is hosted. ",
+          "default": "v3",
+          "enum": [
+            "v2",
+            "v3"
+          ]
+        }
+      }
+    }
+  ],
+  "paths": {
+    "/services": {
+      "get": {
+        "tags": [
+          "services"
+        ],
+        "summary": "List all services",
+        "description": "Fetches one or more services as defined by the parameters of request.\\n\\nThis will retrieve the entire list of services that match the filters, if applicable.  Since the response has the potential to be large, the results will paginated, again according to the request parameters (by default a maximum of 100 assets are allowed in each response).\\n\\nThe results will be returned as a JSON object with an `assets` key, the value of which will be an array of [asset](speca://asset) or [assetWithRelLinks](speca://assetWithRelLinks) objects, each of which contain the standard asset attributes.\",\n       ",
+        "parameters": [
+          {
+            "name": "marketID",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Retrieves existing services by market-id"
+          },
+          {
+            "name": "locationId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Retrieves existing services by location-id"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "stable",
+                  "warning",
+                  "critical"
+                ]
+              }
+            },
+            "description": "Filters existing services by service status. The possible values are \"critical\", \"warning\" and \"stable\"."
+          }
+        ],
+        "operationId": "getServices",
+        "responses": {
+          "200": {
+            "description": "An array of services that match the request parameters requested.",
+            "content" : {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "services": {
+                      "type": "array",
+                      "description": "An array of services that match the request parameters requested.",
+                      "items": {
+                        "$ref": "#/components/schemas/Service"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "204": {
+            "description": "The server successfully processed the request, but is not returning any content."
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "415": {
+            "$ref": "#/components/responses/415"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
+          }
+        }
+      }
+    },
+    "/services/{SERVICE_ID}": {
+      "get": {
+        "tags": [
+          "services"
+        ],
+        "summary": "To retrieve a representation of a service",
+        "description": "Fetches one service as defined by the parameters of request. This will retrieve the entire list of services that match the filters, if applicable.  Since the response has the potential to be large, the results will paginated, again according to the request parameters (by default a maximum of 100 assets are allowed in each response).\\n\\nThe results will be returned as a JSON object with an `assets` key, the value of which will be an array of [asset](speca://asset) or [assetWithRelLinks](speca://assetWithRelLinks) objects, each of which contain the standard asset attributes.\",\n       ",
+        "parameters": [
+          {
+            "name": "SERVICE_ID",
+            "in": "path",
+            "description": "The service that needs to be fetched.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "marketID",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Retrieves existing services by market-id"
+          },
+          {
+            "name": "locationId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Retrieves existing services by location-id"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "stable",
+                  "warning",
+                  "critical"
+                ]
+              }
+            },
+            "description": "Filters existing services by service status. The possible values are \"critical\", \"warning\" and \"stable\"."
+          }
+        ],
+        "operationId": "getService",
+        "responses": {
+          "200": {
+            "description": "An array of services that match the request parameters requested.",
+            "content" : {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "services": {
+                      "type": "array",
+                      "description": "An array of services that match the request parameters requested.",
+                      "items": {
+                        "$ref": "#/components/schemas/Service"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "204": {
+            "description": "The server successfully processed the request, but is not returning any content."
+          },
+          "400": {
+            "$ref": "#/components/responses/400"
+          },
+          "415": {
+            "$ref": "#/components/responses/415"
+          },
+          "500": {
+            "$ref": "#/components/responses/500"
+          },
+          "503": {
+            "$ref": "#/components/responses/503"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "services"
+        ],
+        "summary": "To create a new service",
+        "description": "",
+        "parameters": [
+          {
+            "name": "SERVICE_ID",
+            "in": "path",
+            "description": "The service that needs to be fetched.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "operationId": "createService",
+        "responses": {
+          "default": {
+            "description": "Default response"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {}
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "services"
+        ],
+        "summary": "To update an existing service",
+        "description": "",
+        "parameters": [
+          {
+            "name": "SERVICE_ID",
+            "in": "path",
+            "description": "The service that needs to be fetched.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "operationId": "modifyService",
+        "responses": {
+          "default": {
+            "description": "Default response"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "services"
+        ],
+        "summary": "",
+        "description": "",
+        "parameters": [
+          {
+            "name": "SERVICE_ID",
+            "in": "path",
+            "description": "The service that needs to be fetched.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "operationId": "deleteService",
+        "responses": {
+          "default": {
+            "description": "Default response"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "services"
+        ],
+        "summary": "To update an existing service. It only updates the fields that were supplied, leaving the others alone.",
+        "description": "",
+        "parameters": [
+          {
+            "name": "SERVICE_ID",
+            "in": "path",
+            "description": "The service that needs to be fetched.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "operationId": "updateService",
+        "responses": {
+          "default": {
+            "description": "Default response"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "links": {},
+    "callbacks": {},
+    "schemas": {
+      "Service": {
+        "type": "object",
+        "description": "Represents the target device for which the transcoding of the asset was performed.  Devices can be included in the template when performing a SSIMWAVE analysis and the scores will take the properties of the device into consideration when generating scores.",
+        "properties": {
+          "id": {
+
+            "readOnly": true
+          },
+          "name": {
+            "type": "string",
+            "description": "A unique, mixed-case, name for a device.",
+            "maxLength": 100,
+            "minLength": 1,
+            "example": "OLED55B6P"
+          },
+          "category": {
+
+          },
+          "manufacturer": {
+            "type": "string",
+            "description": "The manufacturer of the viewer device.",
+            "maxLength": 200,
+            "minLength": 1,
+            "example": "LG"
+          },
+          "resolution": {
+
+          },
+          "pixelAspectRatio": {
+
+          },
+          "hdrFormats": {
+            "type": "array",
+            "description": "A list of supported HDR formats",
+            "items": {
+
+            },
+            "example": "[\"HLG\", \"DolbyVision\"]"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "category",
+          "resolution"
+        ]
+      }
+    },
+    "securitySchemes": {
+      "securityScheme": {
+        "type": "apiKey",
+        "name": "ais",
+        "in": "query"
+      }
+    },
+    "responses": {
+      "204": {
+        "description": "The server successfully processed the request, but is not returning any content."
+      },
+      "304": {
+        "description": "Used in response to a PUT or PATCH which does not result in the resource being modified because the attributes have not changed."
+      },
+      "400": {
+        "description": "The request could not be understood by the server due to malformed syntax. The client SHOULD NOT repeat the request without modifications."
+      },
+      "403": {
+        "description": "This request is forbidden"
+      },
+      "404": {
+        "description": "Used when the user is trying to access a non-existent resource or endpoint but other parts of the request are correctly formed."
+      },
+      "409": {
+        "description": "Indicates that the request could not be processed because of a conflict in the request, such as an edit conflict."
+      },
+      "415": {
+        "description": "Used when the request is asking for a content-type that is not supported (i.e. XML when you only support JSON).  The SSIMWAVE VOD Monitor REST API currently only supports JSON content-type (i.e. application/json)."
+      },
+      "500": {
+        "description": "The server encountered an unexpected condition which prevented it from fulfilling the request."
+      },
+      "503": {
+        "description": "The server is currently unable to handle the request due to a temporary overloading or maintenance of the server. The implication is that this is a temporary condition which will be alleviated after some delay."
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "services",
+      "description": "Performs service config related operations"
+    }
+  ]
+}
