@@ -32,5 +32,5 @@ const {{capitalize route.0.fileName}}Router = ({{capitalize route.0.fileName}}) 
     {{/each}}
     {{/each}}
     return router;
-};
+}
 module.exports = {{capitalize route.0.fileName}}Router;

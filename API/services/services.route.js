@@ -28,7 +28,7 @@ const ServicesRouter = (Services) => {
     /**
      * To retrieve a representation of a service
      */
-    router.get('/:SERVICE_ID', async (req, res, next) => {
+    router.get('/:SERVICE_ID', async (req, res, next) => { console.log("req.params.SERVICE_ID",req.params.SERVICE_ID);
 
         const parameters = {
             "SERVICE_ID": req.params.SERVICE_ID, //The service that needs to be fetched.
